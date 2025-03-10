@@ -1,8 +1,14 @@
-// LoginPage.jsx
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginUser } from '../features/auth/authSlice';
 import { useNavigate } from 'react-router-dom';
+import { createSelector } from '@reduxjs/toolkit';
+import { loginServer } from '../features/users/usersSlice';
+
+// יצירת selector מותאם כדי למשוך נתונים מ-Redux
+const selectAuth = createSelector(
+  (state) => state.users || { status: '', error: '' },
+  (users) => users
+);
 
 const LoginPage = () => {
   const dispatch = useDispatch();
@@ -10,39 +16,35 @@ const LoginPage = () => {
   
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [age, setAge] = useState('');
-  const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
-  
-  const { status, error } = useSelector((state) => state.auth);
+
+  const { status, error, user } = useSelector(selectAuth);
+
+  const Message = "הכנס את פרטי המשתמש";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
-    try {
-      const response = await fetch(`http://localhost:5000/api/user/${username}/${password}`, {
-        method: "POST",
-      });
-  
-      if (!response.ok) {
-        throw new Error("Login failed");
+    const userData = { username, password, email };
+
+    // שליחת בקשת התחברות לשרת דרך Redux
+    const resultAction = await dispatch(loginServer(userData));
+
+    if (loginServer.fulfilled.match(resultAction)) {
+      const token = resultAction.payload?.token;
+      if (token) {
+        localStorage.setItem("token", token);
+        console.log("Login successful! Token:", token);
+        navigate('/home');
       }
-  
-      const token = await response.text(); // השרת מחזיר טוקן כטקסט
-      console.log("Login successful! Token:", token);
-  
-      // שמירת הטוקן בלוקאל סטורג' או ב-state לניהול משתמשים מחוברים
-      localStorage.setItem("token", token);
-  
-      navigate('/home'); // מעבר לדף הבית
-    } catch (error) {
-      console.error("Error:", error);
+    } else {
+      console.error("Login failed:", resultAction.payload);
     }
   };
-  
+
   return (
     <div className="login-page">
       <h2>התחברות</h2>
+      <h1>{Message}</h1>
       <form onSubmit={handleSubmit}>
         <div>
           <label>שם משתמש:</label>
@@ -51,6 +53,7 @@ const LoginPage = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="הכנס שם משתמש"
+            required
           />
         </div>
         <div>
@@ -60,24 +63,7 @@ const LoginPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="הכנס סיסמה"
-          />
-        </div>
-        <div>
-          <label>גיל:</label>
-          <input
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            placeholder="הכנס גיל"
-          />
-        </div>
-        <div>
-          <label>תעודת זהות:</label>
-          <input
-            type="text"
-            value={idNumber}
-            onChange={(e) => setIdNumber(e.target.value)}
-            placeholder="הכנס תעודת זהות"
+            required
           />
         </div>
         <div>
@@ -87,11 +73,12 @@ const LoginPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="הכנס מייל"
+            required
           />
         </div>
         {status === 'loading' && <p>...המתן</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit">התחבר</button>
+        <button type="submit" disabled={status === 'loading'}>התחבר</button>
       </form>
     </div>
   );

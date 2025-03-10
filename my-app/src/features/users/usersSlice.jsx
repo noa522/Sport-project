@@ -1,4 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+import { useSelector } from "react-redux";
 
 // נתונים מדגמיים
 const mockUsers = [
@@ -32,7 +34,23 @@ export const updateUser = createAsyncThunk("users/updateUser", async (user) => {
   // כרגע מחזיר את המשתמש כפי שהוא
   return user;
 });
+//הרשמת משתמש
+// שינוי שם הפונקציה ל-loginServer
+export const loginServer = createAsyncThunk("user-login", async (user, thunkApi) => {
+  const state = thunkApi.getState();
+  let message = state.user.message;
+  let { data } = await axios.post("login", user);
+  return data;
+});
 
+//התחברות משתמש
+
+export const rejisterSrever=createAsyncThunk("user-rejister",async(user,tunkApi)=>{
+  let message=useSelector(s=>s.user.meassenge)
+let {data}=await axios.post("adduser",user);
+return data
+
+})
 // מחיקת משתמש
 export const deleteUser = createAsyncThunk("users/deleteUser", async (id) => {
   // בעת חיבור ל-API, יש להחזיר את הקריאה ל-API כאן
@@ -47,9 +65,14 @@ const usersSlice = createSlice({
   initialState: {
     users: [],
     status: "idle", // idle | loading | succeeded | failed
+    message:"",
     error: null,
   },
-  reducers: {},
+  reducers: {
+    login: (state, action) => {
+      state.currentUser = action.payload;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchUsers.pending, (state) => {
@@ -74,8 +97,25 @@ const usersSlice = createSlice({
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.users = state.users.filter((user) => user.id !== action.payload);
-      });
+      })
+      .addCase(loginServer.fulfilled, (state, action) => { 
+
+          state.currentUser=action.payload
+      })
+      .addCase(loginServer.rejected, (state, action) => {
+        state.status="failed"
+  })
+  .addCase(loginServer.pending, (state, action) => {   
+     state.message=" בהתחברות קרתה תקלה"
+    state.status="pending"
+})
+.addCase(rejisterSrever.fulfilled,(state,action)=>{
+  state.currentUser=action.payload.id;
+})
+.addCase(rejisterSrever.rejected, (state, action) => {
+  state.status="failed"
+})
   },
 });
-
+export const {login} =usersSlice.actions
 export default usersSlice.reducer;
