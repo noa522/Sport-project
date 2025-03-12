@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';  // �
 
 import { Provider } from 'react-redux';
 import { store } from './app/store';
-import Users from './components/Users';
+// import Users from './components/Users';
 import LoginPage from './components/LoginPage'; // שים לב לשם הקומפוננטה!
 
 function App() {
